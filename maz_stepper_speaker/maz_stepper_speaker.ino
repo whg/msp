@@ -20,7 +20,7 @@ struct TimedAction {
 
 class StepperDriver : public TimedAction {
 public:
-  StepperDriver(uint8_t stepPin, uint8_t dirPin, uint16_t stepSpeed=400):
+  StepperDriver(uint8_t stepPin, uint8_t dirPin, uint32_t stepSpeed=1000):
     TimedAction(stepSpeed),
     mStepPin(stepPin), mDirectionPin(dirPin), 
     mCurrentPosition(0), mTargetPosition(0),
@@ -45,16 +45,15 @@ public:
 
   void update(uint32_t microsTime) {
 
-    if (abs(mCurrentPosition - mTargetPosition) > 10) {
+    if (abs(mCurrentPosition - mTargetPosition) > 3) {
     
-      //uint16_t timeDiff = microsTime - mLastUpdate;
-      //if (timeDiff > mStepTime) {
       if (tick(microsTime)) {
         digitalWrite(mStepPin, mStep);
         mStep ^= 1;
         mCurrentPosition+= mDirection ? 1 : -1;
-
-        //mLastUpdate = microsTime;
+//        char msg[50];
+//        sprintf(msg, "%d, %d, %d", mCurrentPosition, mTargetPosition, mStep);
+//        Serial.println(msg);
       }
     }
     
@@ -64,7 +63,6 @@ protected:
   uint8_t mStepPin, mDirectionPin;
   int16_t mCurrentPosition, mTargetPosition;
   int16_t mStartPosition, mEndPosition;
-//  uint32_t mLastUpdate; // micros
   uint16_t mStepTime;
 
   uint8_t mStep, mDirection;
@@ -73,7 +71,7 @@ protected:
 
 
 struct UltrasonicReader : protected TimedAction  {
-  UltrasonicReader(uint8_t echoPin, uint8_t triggerPin, uint32_t updateTime=10000):
+  UltrasonicReader(uint8_t echoPin, uint8_t triggerPin, uint32_t updateTime=1000000):
     TimedAction(updateTime),
     mEchoPin(echoPin), mTriggerPin(triggerPin),
     mDistance(0) {
@@ -92,7 +90,7 @@ struct UltrasonicReader : protected TimedAction  {
         mDistance = pulseIn(mEchoPin, HIGH);
         mDistance /= 58;
 
-//        Serial.println(mDistance);
+        Serial.println(mDistance);
       }
 
       return mDistance;
@@ -102,33 +100,46 @@ struct UltrasonicReader : protected TimedAction  {
   uint16_t mDistance;
 };
 
+//template<typename T>
+uint16_t clamp(uint16_t v, uint16_t min, uint16_t max) {
+  if (v > max) {
+    v = max;
+  }
+  else if (v < min) {
+    v = min;
+  }
+  return v;
+}
 
 StepperDriver stepper(7, 8);
 UltrasonicReader distanceReader(4, 5);
 
 uint32_t currentTime;
 
-
+// as you go further out, it goes anti clockwise
+// from bottom: yellow, red, gree, white
 
 void setup() {
   Serial.begin(9600);
-  //stepper.setTarget(400);  
+  stepper.setTarget(100);  
 
   pinMode(A5, INPUT);
 }
-
+uint16_t counter = 0;
 void loop() {
 
   currentTime = micros();
 
-  uint16_t distance = distanceReader.update(currentTime);
-
+ uint16_t distance = distanceReader.update(currentTime);
+ distance = clamp(distance, 10, 300);
+ uint16_t q = map(distance, 10, 300, 600, 0);
+  //Serial.println(counter++);
 //  int val = analogRead(A5);
-//  Serial.println(val);
+ // Serial.println(distance);
 //  delay(500);
 //  stepper.setTarget(val);
 
-  stepper.setTarget(distance*10);
+  stepper.setTarget(q);
 
   stepper.update(currentTime);
 

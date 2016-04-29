@@ -43,8 +43,8 @@ public:
       for (uint8_t chan = 0; chan < 2; ++chan) {
         mData[chan][freq] = analogRead(mPins[chan]);
       }
-      digitalWrite(STROBE, HIGH);
-      digitalWrite(STROBE, LOW);
+      digitalWrite(mStrobePin, HIGH);
+      digitalWrite(mStrobePin, LOW);
     }   
   }
 
